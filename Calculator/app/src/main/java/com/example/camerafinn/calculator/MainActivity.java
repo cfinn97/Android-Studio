@@ -21,6 +21,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private int parenthesesCount_ = 0;
     private boolean invalidEquation_ = false;
     private boolean newEquation_ = true;
+    private String[] mssg_;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,6 +36,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             buttons_[i] = findViewById(resID);
             buttons_[i].setOnClickListener(this);
         }
+        mssg_ = new String[]{"Error", "Not Divisible by 0", "ANS"};
     }
 
     @Override
@@ -61,9 +63,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // delete button
         else if (((Button) v) == buttons_[2]) {
             if (text_.getText().toString().length() > 0) {
-                if (text_.getText().toString().endsWith(")")) parenthesesCount_ += 1;
-                else if (text_.getText().toString().endsWith("(")) parenthesesCount_ -= 1;
-                text_.setText(text_.getText().subSequence(0, text_.getText().toString().length() - 1));
+                if (text_.getText().toString().endsWith(")")) {
+                    parenthesesCount_ += 1;
+                    text_.setText(text_.getText().subSequence(0, text_.getText().toString().length() - 1));
+                } else if (text_.getText().toString().endsWith("(")) {
+                    parenthesesCount_ -= 1;
+                    text_.setText(text_.getText().subSequence(0, text_.getText().toString().length() - 1));
+                } else
+                    for (int i = 0; i < mssg_.length; i++)
+                        if (text_.getText().toString().endsWith(mssg_[i])) {
+                            text_.setText(text_.getText().subSequence(0, text_.getText().toString().length() - mssg_[i].length()));
+                            break;
+                        }
             }
             negPosClicked_ = false;
         }
@@ -145,7 +156,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         if (parts.size() == 1) {
             if (numberFoundAt(parts, 0)) {
-                finalAns_ = Double.parseDouble(parts.get(0).toString());
+                ans_ = Double.parseDouble(parts.get(0).toString());
             } else {
                 text_.setText("Error");
                 invalidEquation_ = true;// if an operation sign, error message
@@ -209,7 +220,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             finalAns_ = ans_;
             if ((int) (finalAns_) == finalAns_) {
                 parts.set(0, String.valueOf((int) (finalAns_)));
-            }
+            } else parts.set(0, String.valueOf(finalAns_));
             text_.setText(parts.get(0).toString());
         }
     }
@@ -342,10 +353,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     public boolean numberFoundAt(List<String> equation, int index) {
         for (int i = 0; i < 10; i++) {
-            if (equation.get(index).toString().endsWith(String.valueOf(i))) return true;
             if (equation.get(index).toString().endsWith(".") && equation.get(index).toString().startsWith(String.valueOf(i)))
                 return true;
             if (equation.get(index).toString().startsWith(".") && equation.get(index).toString().endsWith(String.valueOf(i)))
+                return true;
+            if (equation.get(index).toString().endsWith(String.valueOf(i)) || equation.get(index).toString().equals(String.valueOf(i)))
                 return true;
         }
         return false;
