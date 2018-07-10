@@ -13,20 +13,20 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
-    private Button[] buttons_ = new Button[22];
+    private Button[] buttons_ = new Button[23];
     private TextView text_;
     private double ans_ = 0.0;
+    private double finalAns_ = 0.0;
     private boolean negPosClicked_ = false;
     private int parenthesesCount_ = 0;
     private boolean invalidEquation_ = false;
     private boolean newEquation_ = true;
-    private boolean addToEquation_ = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        String[] buttonNames = new String[]{"AC", "perentheses", "delete", "power", "negPos", "percent", "divide", "7", "8", "9", "multiply", "4", "5", "6", "minus", "1", "2", "3", "add", "0", ".", "equal"};
+        String[] buttonNames = new String[]{"AC", "perentheses", "delete", "power", "negPos", "percent", "divide", "7", "8", "9", "multiply", "4", "5", "6", "minus", "1", "2", "3", "add", "ans", "0", ".", "equal"};
         text_ = (TextView) findViewById(R.id.text_view);
         text_.setMovementMethod(new ScrollingMovementMethod());
         for (int i = 0; i < buttonNames.length; i++) {
@@ -39,27 +39,36 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onClick(View v) {
-        if (((Button) v).getText().toString().equals("=")) { // equals button
+        // equals button
+        if (((Button) v).getText().toString().equals("=")) {
+            if (text_.getText().toString().contains("Error") || text_.getText().toString().contains("Not Divisible by 0"))
+                return;
+            calculate(text_.getText().toString());
             newEquation_ = true;
             parenthesesCount_ = 0;
-
-            calculate(text_.getText().toString());
-
             negPosClicked_ = false;
             invalidEquation_ = false;
-        } else if (((Button) v) == buttons_[0]) { // clear button
+        }
+        // clear button
+        else if (((Button) v) == buttons_[0]) {
+            if (!text_.getText().toString().equals(""))
+                text_.setText("");
             newEquation_ = true;
             parenthesesCount_ = 0;
             negPosClicked_ = false;
-            if (!text_.getText().toString().equals(""))
-                text_.setText(null);
-        } else if (((Button) v) == buttons_[2]) { // delete button
-            if (text_.getText().toString().endsWith(")")) parenthesesCount_ += 1;
-            else if (text_.getText().toString().endsWith("(")) parenthesesCount_ -= 1;
-            if (text_.getText().toString().length() > 0)
+            invalidEquation_ = false;
+        }
+        // delete button
+        else if (((Button) v) == buttons_[2]) {
+            if (text_.getText().toString().length() > 0) {
+                if (text_.getText().toString().endsWith(")")) parenthesesCount_ += 1;
+                else if (text_.getText().toString().endsWith("(")) parenthesesCount_ -= 1;
                 text_.setText(text_.getText().subSequence(0, text_.getText().toString().length() - 1));
+            }
             negPosClicked_ = false;
-        } else if (((Button) v).getText().toString().equals("+/-")) { // +/- button
+        }
+        // +/- button
+        else if (((Button) v).getText().toString().equals("+/-")) {
             if (!negPosClicked_) {
                 text_.setText(text_.getText().toString() + buttons_[14].getText().toString());
                 negPosClicked_ = true;
@@ -67,46 +76,50 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 text_.setText(text_.getText().subSequence(0, text_.getText().toString().length() - 1));
                 negPosClicked_ = false;
             }
-        } else if (((Button) v) == buttons_[1]) { // ( button
+        }
+        // ( button
+        else if (((Button) v) == buttons_[1]) {
             text_.setText(text_.getText().toString() + ((Button) v).getText().toString());
             parenthesesCount_ += 1;
             negPosClicked_ = false;
             newEquation_ = false;
-        } else if (((Button) v).getText().toString().equals(")")) { // ) button
+        }
+        // ) button
+        else if (((Button) v).getText().toString().equals(")")) {
             text_.setText(text_.getText().toString() + ((Button) v).getText().toString());
             parenthesesCount_ -= 1;
             negPosClicked_ = false;
         }
         // for number, ., and operator buttons
+        // need to deal with working with previous answer: adding on to equation
         else {
             if (text_.getText().toString().equals("-") && negPosClicked_ && numClicked(v))
                 text_.setText(text_.getText().toString() + ((Button) v).getText().toString());
-            else if (text_.getText().toString().equals("ERROR") || text_.getText().toString().equals("Not Divisible by 0") ||
+            else if (text_.getText().toString().equals("Error") || text_.getText().toString().equals("Not Divisible by 0") ||
                     (newEquation_ && numClicked(v))) {
                 text_.setText(((Button) v).getText().toString());
-                addToEquation_ = false;
             } else {
                 text_.setText(text_.getText().toString() + ((Button) v).getText().toString());
-                addToEquation_ = true;
             }
             negPosClicked_ = false;
             newEquation_ = false;
         }
         if (parenthesesCount_ > 0)
-            buttons_[21].setText(")");
-        else buttons_[21].setText("=");
+            buttons_[22].setText(")");
+        else buttons_[22].setText("=");
     }
 
     /**
      * Checks if the button clicked is a number or not
      *
      * @param v the button
-     * @return
+     * @return true if a number button has been clicked; false otherwise
      */
     public boolean numClicked(View v) {
         for (int i = 0; i < 10; i++) {
             if (((Button) v).getText().toString().equals(String.valueOf(i))) return true;
         }
+        if ((Button) v == buttons_[19]) return true;
         return false;
     }
 
@@ -118,33 +131,51 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void calculate(String s) {
         List<String> parts = new ArrayList<String>(Arrays.asList(s.split("(?<=[-+*/^%()])|(?=[-+*/^%()])")));
         List<String> partEquation;
-        if (!numberFoundAt(parts, 0) && !parts.get(0).toString().equals("(")) parts.remove(0);
-        if (addToEquation_ && s.startsWith("-")) {
-            parts.set(0, String.valueOf(ans_));
-            parts.remove(1);
-        }
-        if (parts.size() == 1) {
-            ans_ = Double.parseDouble(parts.get(0).toString());
-        } else if (parts.size() == 2 && parts.get(0).toString().equals("-")) {
-            ans_ = Double.parseDouble(parts.get(1)) * -1;
+        if (!numberFoundAt(parts, 0) && !parts.get(0).toString().equals("(") && !parts.get(0).toString().equals(buttons_[19].getText().toString()))
             parts.remove(0);
-            parts.set(0, String.valueOf(ans_));
-        } else if (parts.get(1).toString().equals("%")) {
-            double num = Double.parseDouble(parts.get(0).toString());
-            num = num / 100.0;
-            ans_ = ans_ * num;
-            parts.set(0, Double.toString(ans_));
-            parts.remove(1);
-        } else if (parts.get(0).toString().equals("%")) {
-            text_.setText("ERROR");
+        // checking equation: beginning of equation
+        // only a number input, no calculation
+        int find = parts.indexOf(buttons_[19].getText().toString());
+        int i;
+        // put finalAns_ where "ANS" is in parts (equation list)
+        while (find != -1) {
+            parts.set(find, String.valueOf(finalAns_));
+            find = parts.indexOf(buttons_[19].getText().toString());
+        }
+
+        if (parts.size() == 1) {
+            if (numberFoundAt(parts, 0)) {
+                finalAns_ = Double.parseDouble(parts.get(0).toString());
+            } else {
+                text_.setText("Error");
+                invalidEquation_ = true;// if an operation sign, error message
+            }
+        }
+
+        // only a negative number or a percent
+        if (parts.size() == 2) {
+            if (parts.get(0).toString().equals(buttons_[14].getText().toString()) && negPosClicked_ && numberFoundAt(parts, 1)) {
+                ans_ = Double.parseDouble(parts.get(1)) * -1;
+                finalAns_ = ans_;
+            } else if (numberFoundAt(parts, 0) && parts.get(1).toString().equals("%")) {
+                ans_ = Double.parseDouble(parts.get(0).toString()) / 100.0;
+                finalAns_ = ans_;
+                text_.setText(String.valueOf(finalAns_));
+                return;
+            } else text_.setText("Error");
+            return;
+        }
+
+        if (consecutiveOperationSigns(parts)) {
+            text_.setText("Error");
             return;
         }
 
         int pStart = parts.lastIndexOf("(");
         int pEnd = pStart;
-        int i;
 
-        while (pStart != -1) { // calculate parentheses portions first
+        // calculate parentheses portions first
+        while (pStart != -1) {
             for (i = pStart + 1; i < parts.size(); i++) {
                 if (parts.get(i).toString().equals(")")) {
                     pEnd = i;
@@ -157,8 +188,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 parts.remove(pStart + 1);
 
             solveEquation(partEquation);
+            if (invalidEquation_) return;
 
-            parts.set(pStart + 1, partEquation.get(0));
+            parts.set(pStart + 1, partEquation.get(0).toString());
 
             if (parts.size() > pStart + 3 && !operationFoundAt(parts, pStart + 3))
                 parts.set(pStart + 2, "*");
@@ -173,8 +205,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
         solveEquation(parts);
-
-        text_.setText(parts.get(0).toString());
+        if (!invalidEquation_) {
+            finalAns_ = ans_;
+            if ((int) (finalAns_) == finalAns_) {
+                parts.set(0, String.valueOf((int) (finalAns_)));
+            }
+            text_.setText(parts.get(0).toString());
+        }
     }
 
     /**
@@ -183,21 +220,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * @param equation a list of String
      */
     public void solveEquation(List<String> equation) {
-        int start;
-        start = findOperation(equation);
+        int start = findOperation(equation);
         while (start != -1) {
             if (equation.size() > (start + 1) && equation.get(start + 1).toString().equals("-")) {
                 equation.set(start + 1, String.valueOf(Double.parseDouble(equation.get(start + 2).toString()) * -1));
                 equation.remove(start + 2);
             }
-            if (equation.size() > start + 2 && equation.get(start + 2).toString().equals("%"))
+            if (equation.size() > start + 2 && !equation.get(start).toString().equals("%") && equation.get(start + 2).toString().equals("%"))
                 percent(equation, start + 2);
             compute(equation, start);
             if (invalidEquation_) return;
             start = findOperation(equation);
         }
-        if (equation.size() > 1)
+        if (equation.size() > 1) {
             text_.setText("Error");
+            invalidEquation_ = true;
+        }
     }
 
     /**
@@ -207,16 +245,33 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * @param sign     the index of the operation sign in the equation
      */
     public void compute(List<String> equation, int sign) {
-        double num1 = Double.parseDouble(equation.get(sign - 1)), num2 = Double.parseDouble(equation.get(sign + 1));
+        double num1, num2;
         String operator = equation.get(sign).toString();
+        if (operator.equals("%")) { // modular arithmetic
+            num1 = Double.parseDouble(equation.get(sign - 1).toString());
+            num2 = Double.parseDouble(equation.get(sign + 2).toString());
+            ans_ = (int) (num1 / num2);
+            ans_ = ans_ * num2;
+            if (ans_ == num1) ans_ = 0;
+            else {
+                ans_ = num1 - ans_;
+            }
+            equation.set(sign - 1, String.valueOf(ans_));
+            for (int i = 0; i < 3; i++) {
+                equation.remove(sign);
+            }
+            return;
+        }
+        num1 = Double.parseDouble(equation.get(sign - 1));
+        num2 = Double.parseDouble(equation.get(sign + 1));
         if (operator.equals("*")) ans_ = num1 * num2;
         else if (operator.equals("/")) {
-            if (num2 == 0.0) {
+            if (num2 == 0) {
                 text_.setText("Not Divisible by 0");
                 invalidEquation_ = true;
                 return;
             }
-            ans_ = num1 / num2; // works
+            ans_ = num1 / num2;
         } else if (operator.equals("+")) ans_ = num1 + num2;
         else if (operator.equals(buttons_[14].getText().toString())) {
             ans_ = num1 - num2;
@@ -250,10 +305,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         int temp;
         int sign = equation.size();
         temp = equation.indexOf("^");
-        if (temp != -1 && sign > temp) {
-            sign = temp;
-            return sign;
+        if (temp != -1) {
+            return temp;
         }
+        temp = equation.indexOf("%");
+        // mod symbol is %%; modular arithmetic
+        if (temp != -1 && temp < sign - 2 && equation.get(temp + 1).toString().equals("%")) {
+            return temp;
+        }
+
         if (equation.indexOf("*") != -1 || equation.indexOf("/") != -1) {
             temp = equation.indexOf("*");
             if (temp != -1 && sign > temp)
@@ -261,7 +321,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             temp = equation.indexOf("/");
             if (temp != -1 && sign > temp) sign = temp;
             return sign;
-        } else if (equation.indexOf("+") != -1 || equation.indexOf("-") != -1) {
+        }
+        if (equation.indexOf("+") != -1 || equation.indexOf("-") != -1) {
             temp = equation.indexOf("+");
             if (temp != -1 && sign > temp)
                 sign = temp;
@@ -291,7 +352,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     /**
-     * Checks if there is a "/", "*", "+", or "-" sign in the given equation at the given index
+     * Checks if there is a "^", "/", "*", "+", or "-" sign in the given equation at the given index
      *
      * @param equation a list of String
      * @param index    an integer in the given equation in question
@@ -300,6 +361,33 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public boolean operationFoundAt(List<String> equation, int index) {
         if (equation.get(index).toString().equals("/") || equation.get(index).toString().equals("+") || equation.get(index).toString().equals("*") || equation.get(index).toString().equals("-") || equation.get(index).toString().equals("^"))
             return true;
+        return false;
+    }
+
+    /**
+     * Checks to see if there are invalid consecutive math operator symbols in the given equation. Includes consecutive "ANS" calls and more than 2 "-" in a row
+     *
+     * @param equation a list of String; the equation being checked
+     * @return true if there are invalid consecutive math operators (meaning there is an error in the equation); false otherwise
+     */
+    public boolean consecutiveOperationSigns(List<String> equation) {
+        for (int i = 0, j = 1; j < equation.size(); i++, j++) {
+            // case for 2 "-" signs in a row followed by another opertion sign
+            if (equation.get(i).toString().equals(buttons_[14].getText().toString()) && equation.get(i).toString().equals(equation.get(j).toString()))
+                if (i == 0 || j == equation.size() - 1 || equation.get(j + 1).toString().equals(buttons_[14].getText().toString()) || operationFoundAt(equation, j + 1))
+                    return true;
+                else return false;
+            // using %% for mod
+            if (equation.get(i).toString().equals("%") && equation.get(j).toString().equals("%"))
+                if (i == 0 || j == equation.size() - 1 || equation.get(j + 1).toString().equals("%") || operationFoundAt(equation, j + 1))
+                    return true;
+                else return false;
+
+            if ((operationFoundAt(equation, i) || equation.get(i).toString().equals("%")) && (operationFoundAt(equation, j) || equation.get(j).toString().equals("%")))
+                return true;
+            if (equation.get(i).toString().equals(buttons_[19].getText().toString()) && equation.get(j).toString().equals(buttons_[19].getText().toString()))
+                return true;
+        }
         return false;
     }
 }
